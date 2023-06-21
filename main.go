@@ -36,12 +36,16 @@ const LOGFILE = "out.log"
 const LOGFILE_COUNT = 3
 const LOGFILE_SIZE = 128 * 1024
 
+type Record struct {
+	Type      string `json:"type"`
+	Subdomain string `json:"subdomain"`
+}
+
 // Config is the configuration file format.
 type Config struct {
-	Log       string `json:"log"`
-	Token     string `json:"token"`
-	Subdomain string `json:"subdomain"`
-	Type      string `json:"type"`
+	Log     string   `json:"log"`
+	Token   string   `json:"token"`
+	Records []Record `json:"records"`
 }
 
 // Global variables describing the environment do-dyndns is running in.
@@ -191,14 +195,15 @@ func myPublicIP() (ip net.IP, err error) {
 	return ip, nil
 }
 
-// setSubdomainIP sets the IP address and type of a subdomain.
-func setSubdomainIP(token string, recordType string, subdomain string, ip net.IP) (*godo.Response, error) {
+// setSubdomainIP sets the IP address of a subdomain.
+func setSubdomainIP(client *godo.Client, token string, recordType string, subdomain string, ip net.IP) (*godo.Response, error) {
 	i := strings.Index(subdomain, ".")
+	if i < 0 {
+		die(fmt.Sprintf("invalid subdomain, %s", subdomain), nil)
+	}
 	name := subdomain[:i]
 	domain := subdomain[i+1:]
 
-	// token is a DigitalOcean API token.
-	client := godo.NewFromToken(token)
 	ctx := context.TODO()
 
 	// Get the existing DNS records to avoid creating duplicates.
@@ -235,46 +240,50 @@ func setSubdomainIP(token string, recordType string, subdomain string, ip net.IP
 	return resp, err
 }
 
+// setSubdomainRecords sets the IP address of multiple subdomains.
+func setSubdomainRecords(token string, records *[]Record, ip net.IP) {
+	client := godo.NewFromToken(token)
+	var resp *godo.Response
+	var err error
+
+	for _, record := range *records {
+		if record.Type != "A" && record.Type != "AAAA" {
+			die(fmt.Sprintf("invalid type, %s", record.Type), nil)
+		}
+		if record.Subdomain == "" {
+			die("missing subdomain", nil)
+		}
+
+		resp, err = setSubdomainIP(client, token, record.Type, record.Subdomain, ip)
+		if err != nil {
+			die("error setting subdomain IP", err)
+		}
+		if resp != nil {
+			writeOut(fmt.Sprintf("%s: set %s %s for %s", resp.Status, record.Type, ip.String(), record.Subdomain))
+		}
+
+	}
+}
+
 // RUN
 func main() {
 	config, err := readConfig()
 	if err != nil {
 		die("error reading configuration file", err)
 	}
-
 	if !tty && !systemd {
 		err := initLogger(config.Log)
 		if err != nil {
 			die("error writing to log file", err)
 		}
 	}
-
 	if config.Token == "" {
 		die("missing token", nil)
 	}
-	if config.Subdomain == "" {
-		die("missing subdomain", nil)
-	}
-	i := strings.Index(config.Subdomain, ".")
-	if i < 0 {
-		die(fmt.Sprintf("invalid subdomain, %s", config.Subdomain), nil)
-	}
-	if config.Type != "A" && config.Type != "AAAA" {
-		die(fmt.Sprintf("invalid type, %s", config.Type), nil)
-	}
-
 	var ip net.IP
 	ip, err = myPublicIP()
 	if err != nil {
 		die("error getting public IP", err)
 	}
-
-	var resp *godo.Response
-	resp, err = setSubdomainIP(config.Token, config.Type, config.Subdomain, ip)
-	if err != nil {
-		die("error setting subdomain IP", err)
-	}
-	if resp != nil {
-		writeOut(fmt.Sprintf("%s: set %s %s for %s", resp.Status, config.Type, ip.String(), config.Subdomain))
-	}
+	setSubdomainRecords(config.Token, &config.Records, ip)
 }
