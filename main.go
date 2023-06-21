@@ -192,7 +192,7 @@ func myPublicIP() (ip net.IP, err error) {
 }
 
 // setSubdomainIP sets the IP address and type of a subdomain.
-func setSubdomainIP(token string, recordType string, subdomain string, ip net.IP) error {
+func setSubdomainIP(token string, recordType string, subdomain string, ip net.IP) (*godo.Response, error) {
 	i := strings.Index(subdomain, ".")
 	name := subdomain[:i]
 	domain := subdomain[i+1:]
@@ -204,28 +204,35 @@ func setSubdomainIP(token string, recordType string, subdomain string, ip net.IP
 	// Get the existing DNS records to avoid creating duplicates.
 	records, _, err := client.Domains.Records(ctx, domain, &godo.ListOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var resp *godo.Response
 
 	for _, record := range records {
 		if record.Type == recordType && record.Name == name {
-			// Update an existing DNS record.
-			_, _, err = client.Domains.EditRecord(ctx, domain, record.ID, &godo.DomainRecordEditRequest{
-				Type: recordType,
-				Name: name,
-				Data: ip.String(),
-			})
-			return err
+			if record.Data != ip.String() {
+				// Update an existing DNS record.
+				_, resp, err = client.Domains.EditRecord(ctx, domain, record.ID, &godo.DomainRecordEditRequest{
+					Type: recordType,
+					Name: name,
+					Data: ip.String(),
+				})
+				return resp, err
+			} else {
+				// Do nothing if the IP address is the same.
+				return nil, nil
+			}
 		}
 	}
 
 	// Create a new DNS record.
-	_, _, err = client.Domains.CreateRecord(ctx, domain, &godo.DomainRecordEditRequest{
+	_, resp, err = client.Domains.CreateRecord(ctx, domain, &godo.DomainRecordEditRequest{
 		Type: recordType,
 		Name: name,
 		Data: ip.String(),
 	})
-	return err
+	return resp, err
 }
 
 // RUN
@@ -262,9 +269,12 @@ func main() {
 		die("error getting public IP", err)
 	}
 
-	err = setSubdomainIP(config.Token, config.Type, config.Subdomain, ip)
+	var resp *godo.Response
+	resp, err = setSubdomainIP(config.Token, config.Type, config.Subdomain, ip)
 	if err != nil {
 		die("error setting subdomain IP", err)
 	}
-	writeOut(fmt.Sprintf("successfully set IPv4 %s for %s", ip.String(), config.Subdomain))
+	if resp != nil {
+		writeOut(fmt.Sprintf("%s: set %s %s for %s", resp.Status, config.Type, ip.String(), config.Subdomain))
+	}
 }
