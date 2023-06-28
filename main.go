@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -35,6 +36,15 @@ const DOT_CONFIG = "." + PROG + ".json"
 const LOGFILE = "out.log"
 const LOGFILE_COUNT = 3
 const LOGFILE_SIZE = 128 * 1024
+
+const USAGE = `Usage: %s [OPTIONS]
+
+OPTIONS
+    -h, --help    display this help and exit
+
+FILES
+    $HOME/.config/%s/config.json
+`
 
 type Record struct {
 	Type      string `json:"type"`
@@ -265,8 +275,22 @@ func setSubdomainRecords(token string, records *[]Record, ip net.IP) {
 	}
 }
 
+func parseArguments() bool {
+	var help bool
+	flag.BoolVar(&help, "h", false, "")
+	flag.BoolVar(&help, "help", false, "")
+	flag.Parse()
+	return help
+}
+
 // RUN
 func main() {
+	help := parseArguments()
+	if help {
+		fmt.Fprintf(os.Stderr, USAGE, PROG, PROG)
+		os.Exit(0)
+	}
+
 	config, err := readConfig()
 	if err != nil {
 		die("error reading configuration", err)
@@ -280,10 +304,12 @@ func main() {
 	if config.Token == "" {
 		die("missing token", nil)
 	}
+
 	var ip net.IP
 	ip, err = myPublicIP()
 	if err != nil {
 		die("error getting public IP", err)
 	}
+
 	setSubdomainRecords(config.Token, &config.Records, ip)
 }
