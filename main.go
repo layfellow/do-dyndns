@@ -1,11 +1,7 @@
 /*
 do-dyndns is a simple dynamic DNS client for DigitalOcean.
-It updates a DNS record with the current public IP address.
+It updates one or more DNS records with the current public IP address.
 It is intended to be run as a cron job or a systemd service.
-
-Usage:
-
-	do-dyndns
 */
 package main
 
