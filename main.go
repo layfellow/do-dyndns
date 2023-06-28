@@ -152,7 +152,7 @@ func readConfig() (config Config, err error) {
 		// If it doesn't exist, look for the old style config file in $HOME.
 		configFile = filepath.Join(userHomeDir, DOT_CONFIG)
 		if _, err = os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
-			return
+			return config, errors.New("unable to find config file")
 		}
 	}
 
@@ -269,7 +269,7 @@ func setSubdomainRecords(token string, records *[]Record, ip net.IP) {
 func main() {
 	config, err := readConfig()
 	if err != nil {
-		die("error reading configuration file", err)
+		die("error reading configuration", err)
 	}
 	if !tty && !systemd {
 		err := initLogger(config.Log)
