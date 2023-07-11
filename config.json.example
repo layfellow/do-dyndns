@@ -1,0 +1,14 @@
+{
+  "log": "$HOME/.cache/do-dyndns/out.log",
+  "token": "dop_v1_deadbeef",
+  "records": [
+    {
+      "type": "A",
+      "subdomain": "foo.example.com"
+    },
+    {
+      "type": "A",
+      "subdomain": "bar.example.com"
+    }
+  ]
+}
