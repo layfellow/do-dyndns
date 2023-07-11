@@ -23,6 +23,7 @@ import (
 )
 
 const PROG = "do-dyndns"
+const VERSION = "1.0.0"
 
 // Configuration file names.
 const CONFIG = "config.json"
@@ -37,6 +38,7 @@ const USAGE = `Usage: %s [OPTIONS]
 
 OPTIONS
     -h, --help    display this help and exit
+    -v, --version display version information and exit
 
 FILES
     $HOME/.config/%s/config.json
@@ -271,19 +273,24 @@ func setSubdomainRecords(token string, records *[]Record, ip net.IP) {
 	}
 }
 
-func parseArguments() bool {
-	var help bool
+func parseArguments() (bool, bool) {
+	var help, version bool
 	flag.BoolVar(&help, "h", false, "")
 	flag.BoolVar(&help, "help", false, "")
+	flag.BoolVar(&version, "v", false, "")
+	flag.BoolVar(&version, "version", false, "")
 	flag.Parse()
-	return help
+	return help, version
 }
 
 // RUN
 func main() {
-	help := parseArguments()
+	help, version := parseArguments()
 	if help {
 		fmt.Fprintf(os.Stderr, USAGE, PROG, PROG)
+		os.Exit(0)
+	} else if version {
+		fmt.Fprintf(os.Stderr, "%s %s\n", PROG, VERSION)
 		os.Exit(0)
 	}
 
