@@ -1,6 +1,6 @@
 # DNS dinámico para DigitalOcean
 
-![DDNS](http://univac:8386/layfellow/do-dyndns/raw/branch/main/ddns.png)
+![DDNS](https://raw.githubusercontent.com/parroquiano/do-dyndns/main/ddns.png)
 
 [README in English](README.md)
 
