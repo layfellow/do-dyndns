@@ -7,6 +7,9 @@ build:
 	GOOS=darwin GOARCH=amd64 go build -o build/$(BIN)-darwin-amd64
 	GOOS=darwin GOARCH=arm64 go build -o build/$(BIN)-darwin-arm64
 
+lint:
+	golangci-lint run
+
 dependencies:
 	go get -u
 	go mod tidy
@@ -21,4 +24,4 @@ install:
 clean:
 	rm -rf build
 
-.PHONY: build dependencies releases install clean
+.PHONY: build lint dependencies releases install clean
