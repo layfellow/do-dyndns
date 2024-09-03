@@ -183,24 +183,24 @@ func readConfig() (config Config, err error) {
 
 // myPublicIP returns the public IPv4 address of the machine.
 func myPublicIP() (ip net.IP, err error) {
-	// Use ip-api.com to get the public IP address.
-	resp, err := http.Get("http://ip-api.com/json/")
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
+	resp, err := http.Get("https://api4.ipify.org")
 
-	decoder := json.NewDecoder(resp.Body)
-	var v map[string]interface{}
-	err = decoder.Decode(&v)
 	if err != nil {
-		return
+		return nil, err
 	}
-	ip = net.ParseIP(v["query"].(string))
+
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
+
+	body, err := io.ReadAll(resp.Body)
+
+	ip = net.ParseIP(string(body))
 	if ip == nil {
 		err = errors.New("no IPv4 found")
 	}
-	return ip, nil
+
+	return ip, err
 }
 
 // setSubdomainIP sets the IP address of a subdomain.
