@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -22,19 +23,19 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const PROG = "do-dyndns"
-const VERSION = "1.0.0"
+const Prog = "do-dyndns"
+const Version = "1.0.0"
 
-// Configuration file names.
-const CONFIG = "config.json"
-const DOT_CONFIG = "." + PROG + ".json"
+// ConfigFile names.
+const ConfigFile = "config.json"
+const DotConfigFile = "." + Prog + ".json"
 
-// Log file name and parameters passed to mlog.
-const LOGFILE = "out.log"
-const LOGFILE_COUNT = 3
-const LOGFILE_SIZE = 128 * 1024
+// LogFile name and parameters passed to mlog.
+const LogFile = "out.log"
+const LogFileCount = 3
+const LogFileSize = 128 * 1024
 
-const USAGE = `Usage: %s [OPTIONS]
+const Usage = `Usage: %s [OPTIONS]
 
 OPTIONS
     -h, --help    display this help and exit
@@ -58,26 +59,31 @@ type Config struct {
 
 // Global variables describing the environment do-dyndns is running in.
 var (
-	tty     bool = isatty()
-	systemd bool = isSystemdService()
+	tty     = isatty()
+	systemd = isSystemdService()
 )
 
 // isatty returns true if stdout is a terminal.
 func isatty() bool {
 	_, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
+
 	return err == nil
 }
 
 // isSystemdService returns true if do-dyndns is running as a systemd service.
 func isSystemdService() bool {
 	_, ok := os.LookupEnv("SYSTEMD_EXEC_PID")
+
 	return ok
 }
 
 // writeOut writes to stdout or the log file, depending on the environment.
 func writeOut(text string) {
 	if tty || systemd {
-		fmt.Fprintln(os.Stdout, text)
+		_, err := fmt.Fprintln(os.Stdout, text)
+		if err != nil {
+			return
+		}
 	} else {
 		mlog.Info(text)
 	}
@@ -86,7 +92,10 @@ func writeOut(text string) {
 // writeErr writes to stderr or the log file, depending on the environment.
 func writeErr(text string) {
 	if tty || systemd {
-		fmt.Fprintln(os.Stderr, text)
+		_, err := fmt.Fprintln(os.Stderr, text)
+		if err != nil {
+			return
+		}
 	} else {
 		mlog.Warning(text)
 	}
@@ -95,10 +104,11 @@ func writeErr(text string) {
 // die writes an error message to stderr or the log file and then exits.
 func die(text string, err error) {
 	if err != nil {
-		writeErr(fmt.Sprintf("%s: %s; %s", PROG, text, err))
+		writeErr(fmt.Sprintf("%s: %s; %s", Prog, text, err))
 	} else {
-		writeErr(fmt.Sprintf("%s: %s", PROG, text))
+		writeErr(fmt.Sprintf("%s: %s", Prog, text))
 	}
+
 	os.Exit(1)
 }
 
@@ -117,8 +127,8 @@ func initLogger(logfile string) (err error) {
 		if err != nil {
 			return
 		}
-		logDir = filepath.Join(userCacheDir, PROG)
-		logfile = filepath.Join(logDir, LOGFILE)
+		logDir = filepath.Join(userCacheDir, Prog)
+		logfile = filepath.Join(logDir, LogFile)
 	}
 
 	// Create the log directory if it doesn't exist.
@@ -127,47 +137,52 @@ func initLogger(logfile string) (err error) {
 			return
 		}
 	}
-	mlog.StartEx(mlog.LevelInfo, logfile, LOGFILE_SIZE, LOGFILE_COUNT)
+
+	mlog.StartEx(mlog.LevelInfo, logfile, LogFileSize, LogFileCount)
+
 	return nil
 }
 
 // readConfig reads the configuration file.
 func readConfig() (config Config, err error) {
 	var userHomeDir string
+
 	userHomeDir, err = os.UserHomeDir()
 	if err != nil {
-		return
+		return config, err
 	}
 
 	// userConfigDir is $HOME/.config on Linux.
 	var userConfigDir string
+
 	userConfigDir, err = os.UserConfigDir()
 	if err != nil {
-		return
+		return config, err
 	}
 
 	// Create the config directory if it doesn't exist.
-	configDir := filepath.Join(userConfigDir, PROG)
+	configDir := filepath.Join(userConfigDir, Prog)
 	if _, err = os.Stat(configDir); err != nil {
 		if err = os.MkdirAll(configDir, 0755); err != nil {
-			return
+			return config, err
 		}
 	}
 
 	// Look for the config file in the config directory.
-	configFile := filepath.Join(configDir, CONFIG)
+	configFile := filepath.Join(configDir, ConfigFile)
 	if _, err = os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
 		// If it doesn't exist, look for the old style config file in $HOME.
-		configFile = filepath.Join(userHomeDir, DOT_CONFIG)
+		configFile = filepath.Join(userHomeDir, DotConfigFile)
 		if _, err = os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
 			return config, errors.New("unable to find config file")
 		}
 	}
 
 	var content []byte
+
 	content, err = os.ReadFile(configFile)
 	if err != nil {
-		return
+		return config, err
 	}
 
 	// Substitute $HOME with the actual home directory
@@ -176,9 +191,10 @@ func readConfig() (config Config, err error) {
 	// Parse the JSON data in config file.
 	err = json.Unmarshal(content, &config)
 	if err != nil {
-		return
+		return config, err
 	}
-	return config, nil
+
+	return config, err
 }
 
 // myPublicIP returns the public IPv4 address of the machine.
@@ -204,11 +220,12 @@ func myPublicIP() (ip net.IP, err error) {
 }
 
 // setSubdomainIP sets the IP address of a subdomain.
-func setSubdomainIP(client *godo.Client, token string, recordType string, subdomain string, ip net.IP) (*godo.Response, error) {
+func setSubdomainIP(client *godo.Client, recordType string, subdomain string, ip net.IP) (*godo.Response, error) {
 	i := strings.Index(subdomain, ".")
 	if i < 0 {
 		die(fmt.Sprintf("invalid subdomain, %s", subdomain), nil)
 	}
+
 	name := subdomain[:i]
 	domain := subdomain[i+1:]
 
@@ -231,6 +248,7 @@ func setSubdomainIP(client *godo.Client, token string, recordType string, subdom
 					Name: name,
 					Data: ip.String(),
 				})
+
 				return resp, err
 			} else {
 				// Do nothing if the IP address is the same.
@@ -245,52 +263,66 @@ func setSubdomainIP(client *godo.Client, token string, recordType string, subdom
 		Name: name,
 		Data: ip.String(),
 	})
+
 	return resp, err
 }
 
 // setSubdomainRecords sets the IP address of multiple subdomains.
 func setSubdomainRecords(token string, records *[]Record, ip net.IP) {
 	client := godo.NewFromToken(token)
+
 	var resp *godo.Response
+
 	var err error
 
 	for _, record := range *records {
 		if record.Type != "A" && record.Type != "AAAA" {
 			die(fmt.Sprintf("invalid type, %s", record.Type), nil)
 		}
+
 		if record.Subdomain == "" {
 			die("missing subdomain", nil)
 		}
 
-		resp, err = setSubdomainIP(client, token, record.Type, record.Subdomain, ip)
+		resp, err = setSubdomainIP(client, record.Type, record.Subdomain, ip)
 		if err != nil {
 			die("error setting subdomain IP", err)
 		}
+
 		if resp != nil {
 			writeOut(fmt.Sprintf("%s: set %s %s for %s", resp.Status, record.Type, ip.String(), record.Subdomain))
 		}
-
 	}
 }
 
 func parseArguments() (bool, bool) {
 	var help, version bool
+
 	flag.BoolVar(&help, "h", false, "")
 	flag.BoolVar(&help, "help", false, "")
 	flag.BoolVar(&version, "v", false, "")
 	flag.BoolVar(&version, "version", false, "")
 	flag.Parse()
+
 	return help, version
 }
 
-// RUN
+// RUN.
 func main() {
 	help, version := parseArguments()
 	if help {
-		fmt.Fprintf(os.Stderr, USAGE, PROG, PROG)
+		_, err := fmt.Fprintf(os.Stderr, Usage, Prog, Prog)
+		if err != nil {
+			os.Exit(1)
+		}
+
 		os.Exit(0)
 	} else if version {
-		fmt.Fprintf(os.Stderr, "%s %s\n", PROG, VERSION)
+		_, err := fmt.Fprintf(os.Stderr, "%s %s\n", Prog, Version)
+		if err != nil {
+			os.Exit(1)
+		}
+
 		os.Exit(0)
 	}
 
@@ -298,17 +330,20 @@ func main() {
 	if err != nil {
 		die("error reading configuration", err)
 	}
+
 	if !tty && !systemd {
 		err := initLogger(config.Log)
 		if err != nil {
 			die("error writing to log file", err)
 		}
 	}
+
 	if config.Token == "" {
 		die("missing token", nil)
 	}
 
 	var ip net.IP
+
 	ip, err = myPublicIP()
 	if err != nil {
 		die("error getting public IP", err)

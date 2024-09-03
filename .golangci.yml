@@ -43,6 +43,7 @@ linters:
     - deadcode # Deprecated
     - exhaustivestruct # Deprecated
     - golint # Deprecated
+    - gofumpt # Annoying
     - ifshort # Deprecated
     - interfacer # Deprecated
     - maligned # Deprecated

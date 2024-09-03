@@ -71,6 +71,10 @@ To update all Go dependencies, and update `go.mod` and `go.sum`:
 
     $ make dependencies
 
+To run `golangci-lint` locally (you need [golangci-lint](https://golangci-lint.run/) installed):
+
+    $ make lint
+
 To build the binary for your development platform:
 
     $ make build
