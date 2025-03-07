@@ -12,6 +12,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/digitalocean/godo"
-	"github.com/jbrodriguez/mlog"
 	"golang.org/x/sys/unix"
 )
 
@@ -29,11 +29,6 @@ const Version = "1.0.1"
 // ConfigFile names.
 const ConfigFile = "config.json"
 const DotConfigFile = "." + Prog + ".json"
-
-// LogFile name and parameters passed to mlog.
-const LogFile = "out.log"
-const LogFileCount = 3
-const LogFileSize = 128 * 1024
 
 const Usage = `Usage: %s [OPTIONS]
 
@@ -85,7 +80,7 @@ func writeOut(text string) {
 			return
 		}
 	} else {
-		mlog.Info(text)
+		slog.Info(text)
 	}
 }
 
@@ -97,7 +92,7 @@ func writeErr(text string) {
 			return
 		}
 	} else {
-		mlog.Warning(text)
+		slog.Warn(text)
 	}
 }
 
@@ -110,37 +105,6 @@ func die(text string, err error) {
 	}
 
 	os.Exit(1)
-}
-
-// initLogger initializes mlog.
-func initLogger(logfile string) (err error) {
-	var logDir string
-
-	// If logfile is explicitly set, use it.
-	if logfile != "" {
-		logDir = filepath.Dir(logfile)
-	} else {
-		// Otherwise, use the user cache directory.
-		// On Linux, this is $HOME/.cache.
-		var userCacheDir string
-		userCacheDir, err = os.UserCacheDir()
-		if err != nil {
-			return
-		}
-		logDir = filepath.Join(userCacheDir, Prog)
-		logfile = filepath.Join(logDir, LogFile)
-	}
-
-	// Create the log directory if it doesn't exist.
-	if _, err = os.Stat(logDir); err != nil {
-		if err = os.MkdirAll(logDir, 0755); err != nil {
-			return
-		}
-	}
-
-	mlog.StartEx(mlog.LevelInfo, logfile, LogFileSize, LogFileCount)
-
-	return nil
 }
 
 // readConfig reads the configuration file.
@@ -215,7 +179,7 @@ func myPublicIP() (ip net.IP, err error) {
 
 	// Trim any whitespace from the response
 	ipStr := strings.TrimSpace(string(body))
-	
+
 	ip = net.ParseIP(ipStr)
 	if ip == nil {
 		err = errors.New("no IPv4 found")

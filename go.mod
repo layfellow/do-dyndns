@@ -4,7 +4,6 @@ go 1.19
 
 require (
 	github.com/digitalocean/godo v1.121.0
-	github.com/jbrodriguez/mlog v0.0.0-20180805173533-cbd5ae8e9c53
 	golang.org/x/sys v0.24.0
 )
 
