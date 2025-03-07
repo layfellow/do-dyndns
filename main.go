@@ -199,8 +199,7 @@ func readConfig() (config Config, err error) {
 
 // myPublicIP returns the public IPv4 address of the machine.
 func myPublicIP() (ip net.IP, err error) {
-	resp, err := http.Get("https://api4.ipify.org")
-
+	resp, err := http.Get("https://ifconfig.co/ip")
 	if err != nil {
 		return nil, err
 	}
@@ -210,8 +209,14 @@ func myPublicIP() (ip net.IP, err error) {
 	}(resp.Body)
 
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
-	ip = net.ParseIP(string(body))
+	// Trim any whitespace from the response
+	ipStr := strings.TrimSpace(string(body))
+	
+	ip = net.ParseIP(ipStr)
 	if ip == nil {
 		err = errors.New("no IPv4 found")
 	}
