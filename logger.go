@@ -17,7 +17,7 @@ import (
 )
 
 // customLogHandler implements a custom slog.Handler that formats logs as:
-// [TIME] [LEVEL] [PROG] message
+// [TIME] [LEVEL] [PROG] message.
 type customLogHandler struct {
 	out         io.Writer
 	programName string
@@ -40,11 +40,12 @@ func (h *customLogHandler) Handle(ctx context.Context, r slog.Record) error {
 	levelStr := fmt.Sprintf("[%s]", strings.ToUpper(r.Level.String()))
 	progStr := fmt.Sprintf("[%s]", h.programName)
 
-	// Format the message
+	// Format the message.
 	msg := r.Message
 
-	// Write the formatted log entry
+	// Write the formatted log entry.
 	_, err := fmt.Fprintf(h.out, "%s %s %s %s\n", timeStr, levelStr, progStr, msg)
+
 	return err
 }
 
@@ -60,7 +61,7 @@ func (h *customLogHandler) WithGroup(name string) slog.Handler {
 	return h
 }
 
-// LogFile name
+// LogFile name.
 const LogFile = "out.log"
 
 // initLogger initializes slog with a bracketed format.
@@ -76,7 +77,7 @@ func initLogger(logfile string) (err error) {
 		var userCacheDir string
 		userCacheDir, err = os.UserCacheDir()
 		if err != nil {
-			return
+			return err
 		}
 		logDir = filepath.Join(userCacheDir, Prog)
 		logfile = filepath.Join(logDir, LogFile)
@@ -85,7 +86,7 @@ func initLogger(logfile string) (err error) {
 	// Create the log directory if it doesn't exist.
 	if _, err = os.Stat(logDir); err != nil {
 		if err = os.MkdirAll(logDir, 0755); err != nil {
-			return
+			return err
 		}
 	}
 
@@ -102,7 +103,7 @@ func initLogger(logfile string) (err error) {
 		level:       slog.LevelInfo,
 	}
 
-	// Create logger with the custom handler
+	// Create logger with the custom handler.
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
