@@ -26,12 +26,12 @@ type customLogHandler struct {
 }
 
 // Enabled implements slog.Handler.
-func (h *customLogHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (h *customLogHandler) Enabled(_ context.Context, level slog.Level) bool {
 	return level >= h.level
 }
 
 // Handle implements slog.Handler.
-func (h *customLogHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *customLogHandler) Handle(_ context.Context, r slog.Record) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -50,13 +50,13 @@ func (h *customLogHandler) Handle(ctx context.Context, r slog.Record) error {
 }
 
 // WithAttrs implements slog.Handler.
-func (h *customLogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *customLogHandler) WithAttrs(_ []slog.Attr) slog.Handler {
 	// We don't use attributes in our format, so just return the same handler
 	return h
 }
 
 // WithGroup implements slog.Handler.
-func (h *customLogHandler) WithGroup(name string) slog.Handler {
+func (h *customLogHandler) WithGroup(_ string) slog.Handler {
 	// We don't use groups in our format, so just return the same handler
 	return h
 }

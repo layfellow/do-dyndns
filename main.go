@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -16,7 +15,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/digitalocean/godo"
@@ -33,11 +31,19 @@ const DotConfigFile = "." + Prog + ".json"
 const Usage = `Usage: %s [OPTIONS]
 
 OPTIONS
-    -h, --help    display this help and exit
-    -v, --version display version information and exit
+    -h, --help                display this help and exit
+    -v, --version             display version information and exit
+    --token string            DigitalOcean API token (overrides DYNDNS_TOKEN)
+    --log string              log file path (overrides DYNDNS_LOG)
+    --type string             DNS record type (A or AAAA) (default "A")
+    --subdomain string        Subdomain to update (e.g. "www.example.com")
 
 FILES
     $HOME/.config/%s/config.json
+
+ENVIRONMENT
+    DYNDNS_TOKEN        DigitalOcean API token
+    DYNDNS_LOG          log file path
 `
 
 type Record struct {
@@ -107,59 +113,7 @@ func die(text string, err error) {
 	os.Exit(1)
 }
 
-// readConfig reads the configuration file.
-func readConfig() (config Config, err error) {
-	var userHomeDir string
-
-	userHomeDir, err = os.UserHomeDir()
-	if err != nil {
-		return config, err
-	}
-
-	// userConfigDir is $HOME/.config on Linux.
-	var userConfigDir string
-
-	userConfigDir, err = os.UserConfigDir()
-	if err != nil {
-		return config, err
-	}
-
-	// Create the config directory if it doesn't exist.
-	configDir := filepath.Join(userConfigDir, Prog)
-	if _, err = os.Stat(configDir); err != nil {
-		if err = os.MkdirAll(configDir, 0755); err != nil {
-			return config, err
-		}
-	}
-
-	// Look for the config file in the config directory.
-	configFile := filepath.Join(configDir, ConfigFile)
-	if _, err = os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
-		// If it doesn't exist, look for the old style config file in $HOME.
-		configFile = filepath.Join(userHomeDir, DotConfigFile)
-		if _, err = os.Stat(configFile); errors.Is(err, os.ErrNotExist) {
-			return config, errors.New("unable to find config file")
-		}
-	}
-
-	var content []byte
-
-	content, err = os.ReadFile(configFile)
-	if err != nil {
-		return config, err
-	}
-
-	// Substitute $HOME with the actual home directory
-	content = []byte(os.ExpandEnv(string(content)))
-
-	// Parse the JSON data in config file.
-	err = json.Unmarshal(content, &config)
-	if err != nil {
-		return config, err
-	}
-
-	return config, err
-}
+// readConfig is now defined in config.go
 
 // myPublicIP returns the public IPv4 address of the machine.
 func myPublicIP() (ip net.IP, err error) {
@@ -264,21 +218,26 @@ func setSubdomainRecords(token string, records *[]Record, ip net.IP) {
 	}
 }
 
-func parseArguments() (bool, bool) {
+func parseArguments() (bool, bool, string, string, string, string) {
 	var help, version bool
+	var token, logFile, recordType, subdomain string
 
-	flag.BoolVar(&help, "h", false, "")
-	flag.BoolVar(&help, "help", false, "")
-	flag.BoolVar(&version, "v", false, "")
-	flag.BoolVar(&version, "version", false, "")
+	flag.BoolVar(&help, "h", false, "display help")
+	flag.BoolVar(&help, "help", false, "display help")
+	flag.BoolVar(&version, "v", false, "display version")
+	flag.BoolVar(&version, "version", false, "display version")
+	flag.StringVar(&token, "token", "", "DigitalOcean API token (overrides DYNDNS_TOKEN)")
+	flag.StringVar(&logFile, "log", "", "log file path (overrides DYNDNS_LOG)")
+	flag.StringVar(&recordType, "type", "A", "DNS record type (A or AAAA)")
+	flag.StringVar(&subdomain, "subdomain", "", "Subdomain to update")
 	flag.Parse()
 
-	return help, version
+	return help, version, token, logFile, recordType, subdomain
 }
 
 // RUN.
 func main() {
-	help, version := parseArguments()
+	help, version, token, logFile, recordType, subdomain := parseArguments()
 	if help {
 		_, err := fmt.Fprintf(os.Stderr, Usage, Prog, Prog)
 		if err != nil {
@@ -295,7 +254,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	config, err := readConfig()
+	config, err := readConfig(token, logFile)
 	if err != nil {
 		die("error reading configuration", err)
 	}
@@ -318,5 +277,17 @@ func main() {
 		die("error getting public IP", err)
 	}
 
-	setSubdomainRecords(config.Token, &config.Records, ip)
+	if subdomain != "" {
+		// Use ad-hoc record if subdomain was provided via command line
+		adHocRecords := []Record{
+			{
+				Type:      recordType,
+				Subdomain: subdomain,
+			},
+		}
+		setSubdomainRecords(config.Token, &adHocRecords, ip)
+	} else {
+		// Use records from config file
+		setSubdomainRecords(config.Token, &config.Records, ip)
+	}
 }

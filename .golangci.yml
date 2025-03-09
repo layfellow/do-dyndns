@@ -36,6 +36,11 @@ linters-settings:
           - $gostd
           - github.com/digitalocean
           - github.com/jbrodriguez
+  wsl:
+    allow-cuddle-declarations: true
+    allow-assign-and-anything: true
+    allow-cuddle-with-calls: true
+    allow-cuddle-with-if: true
 
 linters:
   enable-all: true
