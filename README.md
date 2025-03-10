@@ -15,7 +15,26 @@ pointed to the actual public IP.
 
 ## Installation
 
-Download the appropriate binary for your platform from [Releases](https://github.com/layfellow/do-dyndns/releases) and copy it to any directory in your `PATH` as `do-dyndns`.
+For Linux and macOS, use:
+
+```sh
+$ curl -sfL https://layfellow.net/do-dyndns/installer.sh | sh
+```
+
+This script fetches the latest binary for your platform and installs it in `~/.local/bin` or
+`~/bin`.
+
+For Windows ... huh,
+[I don’t use Windows](https://www.fsf.org/news/lifes-better-together-when-you-avoid-windows-11),
+so there are no releases for it, but the Linux binary should work under
+[WSL 2](https://learn.microsoft.com/en-us/windows/wsl/).
+
+Alternatively, if you have Go (version 1.22 or later), you can download, compile and install
+do-dyndns with:
+
+```sh
+$ go install github.com/layfellow/do-dyndns@latest
+```
 
 Copy the example configuration file `config.json.example` to `$HOME/.config/do-dyndns/config.json`.
 Make sure to create first the `$HOME/.config/do-dyndns` directory or, alternatively, you can use a more traditional `$HOME/.do-dyndnsrc.json` file.
@@ -37,24 +56,27 @@ For each item in `records`, you need to set:
 - `"subdomain"`: a fully qualified subdomain name to be dynamically updated with the current public
   IP of the client host.
 
-## Environment variables
-
-The following enviroment variables can be used instead of `token` and `log` in the configuration file.
-
-- `DYNDNS_TOKEN`: Your DigitalOcean API token
-- `DYNDNS_LOG`: Path to the log file
-
 ## Running interactively
+
+You can run `do-dyndns` interactively from the command line with various options:
 
 ```sh
 $ do-dyndns [OPTIONS]
 ```
+
+### Environment variables
+
+The following environment variables can be used instead of `token` and `log` in the configuration file:
+
+- `DYNDNS_TOKEN`: Your DigitalOcean API token
+- `DYNDNS_LOG`: Path to the log file
+
 ### Command-line options
 
 - `--token string`: DigitalOcean API token
    (overrides both the `DYNDNS_TOKEN` environment variable and `token` in the configuration file)
 - `--log string`: Log file path
-   (overrides the `DYNDNS_LOG` environment variable and `log ` in the configuration file)
+   (overrides the `DYNDNS_LOG` environment variable and `log` in the configuration file)
 - `--type string`: DNS record type, either "A" (IPv4) or "AAAA" (IPv6) (default is "A")
 - `--subdomain string`: Fully qualified subdomain to update (e.g., "www.example.com")
 

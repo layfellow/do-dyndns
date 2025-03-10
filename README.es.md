@@ -15,8 +15,25 @@ registro de subdominio `foo.example.com` a la IP pública real.
 
 ## Instalación
 
-Descargue el binario apropiado para su plataforma desde [Releases](https://github.com/layfellow/do-dyndns/releases)
-y cópielo en cualquier directorio del `PATH` con el nombre `do-dyndns`.
+Para Linux y macOS, use:
+
+```sh
+$ curl -sfL https://layfellow.net/do-dyndns/installer.sh | sh
+```
+
+Este script descarga el binario más reciente para su plataforma y lo instala en `~/.local/bin` o `~/bin`.
+
+Para Windows ... eh,
+[no uso Windows](https://www.fsf.org/es/news/la-vida-es-mejor-juntos-cuando-evitas-windows-11),
+así que no hay versiones para éste, pero el binario de Linux debería funcionar bajo
+[WSL 2](https://learn.microsoft.com/en-us/windows/wsl/).
+
+Alternativamente, si tiene Go (versión 1.22 o posterior), puede descargar, compilar e instalar
+do-dyndns con:
+
+```sh
+$ go install github.com/layfellow/do-dyndns@latest
+```
 
 Copie el archivo de configuración de ejemplo `config.json.example` a `$HOME/.config/do-dyndns/config.json`.
 Cree primero el directorio `$HOME/.config/do-dyndns`. Como alternativa, puede usar una archivo
