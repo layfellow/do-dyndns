@@ -1,6 +1,6 @@
 module do-dyndns
 
-go 1.19
+go 1.20
 
 require (
 	github.com/digitalocean/godo v1.121.0
