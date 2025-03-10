@@ -1,5 +1,5 @@
 {
-  "log": "$HOME/.cache/do-dyndns/out.log",
+  "log": "/home/user/.cache/do-dyndns/out.log",
   "token": "dop_v1_deadbeef",
   "records": [
     {
