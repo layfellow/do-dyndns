@@ -39,6 +39,44 @@ Para cada elemento de `records`, es necesario proporcionar:
 - `"subdominio"`: un nombre de subdominio completo para actualizar dinámicamente con la IP pública
 actual del host cliente.
 
+## Variables de entorno
+
+Las siguientes variables de entorno se pueden utilizar en lugar de `token` y `log` en el archivo de configuración.
+
+- `DYNDNS_TOKEN`: Token de API de DigitalOcean
+- `DYNDNS_LOG`: Ruta al archivo de log
+
+## Ejecución interactiva
+
+```sh
+$ do-dyndns [OPTIONS]
+```
+
+### Opciones de línea de comandos
+
+- `--token string`: Token de API de DigitalOcean
+   (tiene precedencia sobre la variable de entorno `DYNDNS_TOKEN` y `token` en el archivo de configuración)
+- `--log string`: Ruta del archivo de registro
+   (tiene precedencina sobre la variable de entorno `DYNDNS_LOG` y `log` en el archivo de configuración)
+- `--type string`: Tipo de registro DNS, ya sea "A" (IPv4) o "AAAA" (IPv6) (el valor predeterminado es "A")
+- `--subdomain string`: Subdominio calificado a actualizar (por ejemplo, "www.example.com")
+
+Al usar la opción `--subdomain`, `do-dyndns` actualizará solo ese subdominio específico,
+ignorando cualquier registro definido en el archivo de configuración.
+
+Ejemplo de uso:
+
+```sh
+# Actualizar un subdominio específico usando una variable de entorno para el token
+$ DYNDNS_TOKEN=your_digitalocean_token do-dyndns --subdomain myhost.example.com
+
+# Actualizar un subdominio específico con un tipo de registro específico
+$ do-dyndns --token your_digitalocean_token --type A --subdomain myhost.example.com
+
+# Actualizar todos los subdominios definidos en el archivo de configuración
+$ do-dyndns
+```
+
 ## Ejecución como tarea cron o temporizador systemd
 
 Se puede ejecutar `do-dyndns` como una tarea cron. Toda la actividad se registra en el

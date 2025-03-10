@@ -37,6 +37,43 @@ For each item in `records`, you need to set:
 - `"subdomain"`: a fully qualified subdomain name to be dynamically updated with the current public
   IP of the client host.
 
+## Environment variables
+
+The following enviroment variables can be used instead of `token` and `log` in the configuration file.
+
+- `DYNDNS_TOKEN`: Your DigitalOcean API token
+- `DYNDNS_LOG`: Path to the log file
+
+## Running interactively
+
+```sh
+$ do-dyndns [OPTIONS]
+```
+### Command-line options
+
+- `--token string`: DigitalOcean API token
+   (overrides both the `DYNDNS_TOKEN` environment variable and `token` in the configuration file)
+- `--log string`: Log file path
+   (overrides the `DYNDNS_LOG` environment variable and `log ` in the configuration file)
+- `--type string`: DNS record type, either "A" (IPv4) or "AAAA" (IPv6) (default is "A")
+- `--subdomain string`: Fully qualified subdomain to update (e.g., "www.example.com")
+
+When using the `--subdomain` option, `do-dyndns` will update only that specific subdomain,
+ignoring any records defined in the configuration file.
+
+Example usage:
+
+```sh
+# Update a specific subdomain using an environment variable for the token
+$ DYNDNS_TOKEN=your_digitalocean_token do-dyndns --subdomain myhost.example.com
+
+# Update a specific subdomain with a specific record type
+$ do-dyndns --token your_digitalocean_token --type A --subdomain myhost.example.com
+
+# Update all subdomains defined in the configuration file
+$ do-dyndns
+```
+
 ## Running as a cron job or systemd timer
 
 You can run `do-dyndns` as a cron job. All activity will be logged to the `log` file.
