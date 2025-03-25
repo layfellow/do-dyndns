@@ -22,7 +22,7 @@ import (
 )
 
 const Prog = "do-dyndns"
-const Version = "1.2.0"
+const Version = "1.2.1"
 
 // ConfigFile names.
 const ConfigFile = "config.json"
