@@ -113,11 +113,23 @@ func die(text string, err error) {
 	os.Exit(1)
 }
 
-// readConfig is now defined in config.go
+// Create a HTTP client for IPv4 connections only.
+func createIPv4Client() *http.Client {
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "tcp4", addr)
+		},
+	}
+
+	return &http.Client{
+		Transport: transport,
+	}
+}
 
 // myPublicIP returns the public IPv4 address of the machine.
 func myPublicIP() (ip net.IP, err error) {
-	resp, err := http.Get("https://ifconfig.co/ip")
+	client := createIPv4Client()
+	resp, err := client.Get("https://ifconfig.co/ip")
 	if err != nil {
 		return nil, err
 	}
